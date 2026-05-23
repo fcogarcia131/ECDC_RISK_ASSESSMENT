@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluación Rápida de Riesgos ECDC</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 1.5rem; }
+input, select, textarea, button { font-family: inherit; font-size: 14px; border-radius: 6px; border: 1px solid #d0d0d0; padding: 8px 10px; background: #fff; color: #1a1a1a; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #1D9E75; border-color: #1D9E75; }
+button { cursor: pointer; background: #f0f0f0; border: 1px solid #ccc; }
+button:hover { background: #e0e0e0; }
+
+.wrap { max-width: 700px; margin: 0 auto; }
+.header { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
+.header h1 { font-size: 20px; font-weight: 600; color: #111; }
+.header p { font-size: 13px; color: #666; margin-top: 4px; }
+
+.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+.meta-grid input, .meta-grid select { width: 100%; }
+.field-label { font-size: 12px; color: #555; display: block; margin-bottom: 4px; }
+.scenario-picker { grid-column: 1 / -1; }
+.sc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sc-btn { border: 1px solid #ccc; border-radius: 8px; padding: 10px 14px; background: #f8f8f8; cursor: pointer; text-align: left; transition: all 0.15s; }
+.sc-btn:hover { background: #fff; border-color: #aaa; }
+.sc-code { font-size: 13px; font-weight: 600; display: block; }
+.sc-desc { font-size: 12px; color: #666; display: block; margin-top: 2px; }
+.sc-btn.sc-selected-1a, .sc-btn.sc-selected-1b { border-color: #1D9E75; background: #E1F5EE; }
+.sc-btn.sc-selected-1a .sc-code, .sc-btn.sc-selected-1b .sc-code { color: #085041; }
+.sc-btn.sc-selected-2a { border-color: #BA7517; background: #FAEEDA; }
+.sc-btn.sc-selected-2a .sc-code { color: #633806; }
+.sc-btn.sc-selected-2b { border-color: #D85A30; background: #FAECE7; }
+.sc-btn.sc-selected-2b .sc-code { color: #4A1B0C; }
+.sc-group-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #999; margin-bottom: 6px; margin-top: 10px; }
+.sc-group-label:first-child { margin-top: 0; }
+.sc-hint { font-size: 12px; color: #555; margin-top: 10px; padding: 8px 12px; background: #fff; border-radius: 6px; border-left: 3px solid #ccc; display: none; }
+.sc-hint.visible { display: block; }
+
+.progress-bar { height: 5px; background: #e0e0e0; border-radius: 3px; margin-bottom: 1.5rem; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: #1D9E75; transition: width 0.3s; }
+
+.step-card { border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 1rem; overflow: hidden; background: #fff; }
+.step-card.step-optional { border-style: dashed; }
+.step-header { display: flex; align-items: center; gap: 12px; padding: 1rem 1.25rem; cursor: pointer; user-select: none; background: #fff; }
+.step-header:hover { background: #fafafa; }
+.step-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.step-title { font-size: 15px; font-weight: 600; color: #111; flex: 1; }
+.step-relevance { font-size: 11px; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; background: #eee; color: #666; }
+.step-chevron { font-size: 18px; color: #888; transition: transform 0.2s; }
+.step-chevron.open { transform: rotate(180deg); }
+.step-body { padding: 0 1.25rem 1.25rem; display: none; border-top: 1px solid #f0f0f0; }
+.step-body.open { display: block; }
+
+.q-block { margin-top: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #f0f0f0; }
+.q-block:last-child { border-bottom: none; padding-bottom: 0; }
+.q-label { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 4px; display: flex; align-items: flex-start; gap: 8px; }
+.q-num { background: #f0f0f0; border-radius: 4px; padding: 1px 7px; font-size: 11px; color: #666; flex-shrink: 0; margin-top: 1px; }
+.q-sub { font-size: 12px; color: #666; margin-bottom: 8px; line-height: 1.5; }
+.q-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.traffic { display: flex; gap: 8px; }
+.traffic button {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid transparent;
+  background: #f0f0f0;
+  cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s, box-shadow 0.15s, border-color 0.15s;
+  opacity: 0.35; padding: 0;
+}
+.traffic button:hover { opacity: 0.75; transform: scale(1.1); }
+.traffic button.sel-green { opacity:1; border-color:#1a9940; box-shadow:0 0 0 3px rgba(26,153,64,0.25); transform:scale(1.18); }
+.traffic button.sel-amber { opacity:1; border-color:#c89000; box-shadow:0 0 0 3px rgba(200,144,0,0.25); transform:scale(1.18); }
+.traffic button.sel-red   { opacity:1; border-color:#cc2233; box-shadow:0 0 0 3px rgba(204,34,51,0.25); transform:scale(1.18); }
+.traffic button.sel-gray  { opacity:1; border-color:#888;    box-shadow:0 0 0 3px rgba(136,136,136,0.2); transform:scale(1.18); }
+.traffic-label { font-size: 12px; color: #666; font-style: italic; }
+
+textarea { width: 100%; min-height: 70px; resize: vertical; margin-top: 8px; font-size: 13px; }
+
+.actions { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
+.actions button { flex: 1; min-width: 140px; padding: 10px 16px; font-size: 14px; font-weight: 500; border-radius: 8px; border: 1px solid #ccc; background: #fff; }
+.actions button:hover { background: #f0f0f0; }
+.btn-primary { background: #1D9E75 !important; color: #fff !important; border-color: #1D9E75 !important; }
+.btn-primary:hover { background: #17876200 !important; }
+
+.summary-panel { display: none; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.25rem; background: #fafafa; margin-top: 1.5rem; }
+.summary-panel.open { display: block; }
+.summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1rem; }
+.sum-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; text-align: center; }
+.sum-card .sc-num { font-size: 22px; font-weight: 700; }
+.sum-card .sc-lbl { font-size: 11px; color: #666; margin-top: 2px; }
+.gap-list { font-size: 13px; }
+.gap-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+.gap-item:last-child { border-bottom: none; }
+.gap-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+
+/* MODAL */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:1rem; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:10px; border:1px solid #ddd; width:100%; max-width:620px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid #eee; }
+.modal-header h3 { font-size:15px; font-weight:600; }
+.modal-close { background:none; border:none; cursor:pointer; font-size:22px; color:#888; line-height:1; padding:0 4px; }
+.modal-close:hover { color:#111; }
+.modal-body { flex:1; overflow:auto; padding:1rem 1.25rem; background:#f9f9f9; }
+.modal-body pre { font-family: 'Courier New', monospace; font-size:12px; white-space:pre-wrap; word-break:break-word; color:#222; line-height:1.7; }
+.modal-footer { padding:0.75rem 1.25rem; border-top:1px solid #eee; display:flex; gap:8px; justify-content:flex-end; align-items:center; }
+.modal-footer button { padding:8px 20px; font-size:13px; font-weight:500; }
+.btn-copy { background:#1D9E75; color:#fff; border-color:#1D9E75; }
+.btn-copy:hover { background:#178762; }
+.copy-ok { font-size:12px; color:#1D9E75; font-weight:500; display:none; }
+.copy-ok.show { display:block; }
+
+@media (max-width: 720px) {
+  body { padding: .75rem; }
+  .wrap { max-width: 100%; }
+  .header { padding: 1rem; }
+  .header h1 { font-size: 19px; }
+  .meta-grid, .sc-options { grid-template-columns: 1fr; }
+  .sc-btn { min-height: 70px; }
+  .step-header { padding: .9rem; gap: 8px; align-items: flex-start; }
+  .step-title { font-size: 14px; }
+  .step-body { padding: 0 .9rem .9rem; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .traffic button { width: 42px; height: 42px; }
+  .actions { position: sticky; bottom: 0; z-index: 10; background: rgba(245,245,245,.96); padding: 10px 0; }
+  .actions button { min-width: 100%; }
+}
+@media print {
+  body { background: white; padding: 0; }
+  .actions, .progress-bar, .modal-overlay { display: none !important; }
+  .wrap { max-width: 100%; }
+  .step-body { display: block !important; }
+  .step-card { break-inside: avoid; }
+}
+
+</style>
+
+<meta name="theme-color" content="#1D9E75">
+<meta name="description" content="Aplicación PWA para evaluación rápida de riesgos ECDC: 5 pasos y 20 preguntas.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Evaluación rápida de riesgos — ECDC</h1>
+    <p>Marco de 5 pasos · 20 preguntas · Enfermedades transmitidas por mosquitos</p>
+  </div>
+
+  <div class="meta-grid">
+    <div>
+      <label class="field-label">Evaluador/es</label>
+      <input type="text" id="evaluador" placeholder="Nombre(s) del experto/comité">
+    </div>
+    <div>
+      <label class="field-label">Fecha</label>
+      <input type="date" id="fecha">
+    </div>
+    <div>
+      <label class="field-label">Patógeno / enfermedad evaluada</label>
+      <input type="text" id="patogeno" placeholder="p. ej. Virus del Nilo Occidental">
+    </div>
+    <div>
+      <label class="field-label">Área geográfica</label>
+      <input type="text" id="area" placeholder="p. ej. Comunitat Valenciana">
+    </div>
+    <div class="scenario-picker">
+      <label class="field-label">Escenario epidemiológico (selecciona uno)</label>
+      <div style="margin-bottom:6px">
+        <div class="sc-group-label">Escenario 1 — Pre-enfermedad</div>
+        <div class="sc-options">
+          <button class="sc-btn" id="sc-1a" onclick="selectScenario('1a')">
+            <span class="sc-code">1A · Evaluación inicial</span>
+            <span class="sc-desc">Primera detección de un vector putativo. Sin casos humanos ni transmisión.</span>
+          </button>
+          <button class="sc-btn" id="sc-1b" onclick="selectScenario('1b')">
+            <span class="sc-code">1B · Preparación</span>
+            <span class="sc-desc">El vector está establecido. Se trabaja en planes de vigilancia y contingencia.</span>
+          </button>
+        </div>
+      </div>
+      <div>
+        <div class="sc-group-label">Escenario 2 — Enfermedad</div>
+        <div class="sc-options">
+          <button class="sc-btn" id="sc-2a" onclick="selectScenario('2a')">
+            <span class="sc-code">2A · Casos ocasionales</span>
+            <span class="sc-desc">Casos humanos esporádicos. Transmisión local posible pero no sostenida.</span>
+          </button>
+          <button class="sc-btn" id="sc-2b" onclick="selectScenario('2b')">
+            <span class="sc-code">2B · Casos recurrentes</span>
+            <span class="sc-desc">Transmisión local sostenida o brotes repetidos en la misma área.</span>
+          </button>
+        </div>
+      </div>
+      <div class="sc-hint" id="sc-hint"></div>
+    </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progbar" style="width:0%"></div></div>
+  <div id="steps-container"></div>
+
+  <div class="actions">
+    <button onclick="generateSummary()">Generar resumen ↗</button>
+    <button onclick="openExportModal()" class="btn-primary">Exportar informe ↓</button>
+    <button onclick="generatePDF()">Generar PDF / Imprimir</button>
+    <button onclick="downloadReportTxt()">Descargar TXT</button>
+  </div>
+
+  <div class="summary-panel" id="summaryPanel">
+    <p style="font-size:15px;font-weight:600;margin-bottom:1rem">Resumen de la evaluación</p>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:#555">Vacíos de información identificados</p>
+    <div class="gap-list" id="gapList"></div>
+  </div>
+</div>
+
+<!-- MODAL EXPORTAR -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Informe de evaluación — copia el texto</h3>
+      <button class="modal-close" onclick="closeExportModal()">✕</button>
+    </div>
+    <div class="modal-body"><pre id="reportPre"></pre></div>
+    <div class="modal-footer">
+      <span class="copy-ok" id="copyOk">✅ ¡Copiado!</span>
+      <button class="btn-copy" onclick="copyReport()">Copiar todo</button>
+      <button onclick="generatePDF()">Generar PDF</button>
+      <button onclick="downloadReportTxt()">Descargar TXT</button>
+      <button onclick="closeExportModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TRAFFIC_LABELS = { green:'✅ Disponible', amber:'⚠️ Parcial', red:'❌ Vacío', gray:'⬜ No aplica' };
+
+const STEPS = [
+  { id:1, title:"Presencia de riesgo entomológico", color:"#1D9E75", bg:"#E1F5EE", text:"#085041",
+    relevance:{"1a":"prioritario","1b":"prioritario","2a":"prioritario","2b":"prioritario"},
+    qs:[
+      {n:1,label:"Identificación de especies vectoras",sub:"¿Se han identificado especies vectoras? ¿Qué mosquitos nativos están presentes y posiblemente implicados?"},
+      {n:2,label:"Distribución de vectores putativos",sub:"¿En qué parte del territorio se detectaron? ¿Son raros, localizados o ubicuos? ¿Se conoce su distribución local/nacional?"}
+    ]},
+  { id:2, title:"Ocurrencia espacio-temporal del riesgo", color:"#378ADD", bg:"#E6F1FB", text:"#0C447C",
+    relevance:{"1a":"prioritario","1b":"prioritario","2a":"prioritario","2b":"prioritario"},
+    qs:[
+      {n:3,label:"Estacionalidad y actividad",sub:"¿Cuándo pican durante el año? ¿Cómo invernan? ¿Cuál es la temporada de inactividad?"},
+      {n:4,label:"Abundancia poblacional",sub:"¿Cuántos mosquitos hay? ¿Qué tan abundantes son las especies plaga y vectoras?"},
+      {n:5,label:"Comportamiento de picadura",sub:"¿A quién pican? ¿Humanos, animales? ¿Cuándo y dónde? ¿Constituyen una plaga?"}
+    ]},
+  { id:3, title:"Opciones de control vectorial", color:"#BA7517", bg:"#FAEEDA", text:"#633806",
+    relevance:{"1a":"opcional","1b":"prioritario","2a":"prioritario","2b":"prioritario"},
+    qs:[
+      {n:6,label:"Hábitats larvales y de reposo",sub:"¿Dónde se desarrollan y descansan? ¿Cuáles son los hábitats de larvas y adultos?"},
+      {n:7,label:"Dispersión vectorial",sub:"¿Cómo y hasta dónde se dispersan las especies vectoras?"},
+      {n:8,label:"Estrategias de control",sub:"¿Cómo se pueden controlar? ¿Manejo ambiental, insecticidas, otras estrategias?"},
+      {n:9,label:"Susceptibilidad a insecticidas",sub:"¿Son las poblaciones susceptibles a los insecticidas? ¿Hay resistencias documentadas?"},
+      {n:10,label:"Protección frente a picaduras",sub:"¿Cómo evitar las picaduras? ¿Protección personal, barreras físicas disponibles?"}
+    ]},
+  { id:4, title:"Impulsores entomológicos de transmisión", color:"#D85A30", bg:"#FAECE7", text:"#4A1B0C",
+    relevance:{"1a":"opcional","1b":"opcional","2a":"prioritario","2b":"prioritario"},
+    qs:[
+      {n:11,label:"Influencia del clima",sub:"¿El clima afecta la actividad/distribución vectorial?"},
+      {n:12,label:"Impacto del medio ambiente",sub:"¿Cambios en el uso del suelo o problemas agrícolas/industriales que afecten a los vectores?"},
+      {n:13,label:"Vectores infectados en campo",sub:"¿Se han hallado vectores putativos infectados con el patógeno?"},
+      {n:14,label:"Competencia vectorial local",sub:"¿Es la especie identificada una transmisora eficiente? ¿Cuál es la competencia vectorial de las poblaciones locales?"},
+      {n:15,label:"Temperatura y desarrollo del patógeno",sub:"¿Son las temperaturas locales adecuadas para el desarrollo del patógeno en el vector?"},
+      {n:16,label:"Período estacional de transmisión",sub:"¿Cuándo comienzan y terminan las condiciones para la transmisión estacional?"}
+    ]},
+  { id:5, title:"Impulsores zoonóticos y no entomológicos", color:"#7F77DD", bg:"#EEEDFE", text:"#26215C",
+    relevance:{"1a":"opcional","1b":"opcional","2a":"prioritario","2b":"prioritario"},
+    qs:[
+      {n:17,label:"Fauna silvestre implicada",sub:"¿Qué animales salvajes intervienen en el ciclo de transmisión?"},
+      {n:18,label:"Animales domésticos implicados",sub:"¿Qué animales domésticos están involucrados?"},
+      {n:19,label:"Distribución y dinámica de huéspedes",sub:"¿Cuál es la distribución de huéspedes animales y qué factores controlan su abundancia?"},
+      {n:20,label:"Otros impulsores de transmisión",sub:"¿Historial de viajes, comportamiento humano, interacciones desconocidas u otros factores?"}
+    ]}
+];
+
+const SCENARIO_HINTS = {
+  "1a":"En escenario 1A el foco está en los pasos 1–2 (Q1–Q5). Los pasos 3–5 son opcionales pero accesibles.",
+  "1b":"En escenario 1B se trabajan activamente los pasos 1–3 (Q1–Q10). Los pasos 4–5 son opcionales pero accesibles.",
+  "2a":"En escenario 2A se requiere respuesta a las 20 preguntas. Prioridad en pasos 4 y 5.",
+  "2b":"En escenario 2B la totalidad de las 20 preguntas es obligatoria."
+};
+
+const answers = {};
+let currentScenario = null;
+
+function selectScenario(code) {
+  currentScenario = code;
+  ['1a','1b','2a','2b'].forEach(c => {
+    document.getElementById('sc-'+c).className = 'sc-btn' + (c===code ? ' sc-selected-'+c : '');
+  });
+  const hint = document.getElementById('sc-hint');
+  hint.textContent = SCENARIO_HINTS[code];
+  hint.classList.add('visible');
+  applyRelevance();
+}
+
+function applyRelevance() {
+  if (!currentScenario) return;
+  STEPS.forEach(step => {
+    const rel = step.relevance[currentScenario];
+    const card = document.getElementById('card-'+step.id);
+    const badge = document.getElementById('rel-'+step.id);
+    if (card) card.classList.toggle('step-optional', rel === 'opcional');
+    if (badge) {
+      badge.textContent = rel;
+      badge.style.background = rel==='prioritario' ? '#E1F5EE' : '#eee';
+      badge.style.color = rel==='prioritario' ? '#085041' : '#666';
+    }
+  });
+}
+
+function buildSteps() {
+  const container = document.getElementById('steps-container');
+  STEPS.forEach(step => {
+    const card = document.createElement('div');
+    card.className = 'step-card';
+    card.id = 'card-'+step.id;
+    card.innerHTML =
+      '<div class="step-header" onclick="toggleStep('+step.id+')">' +
+        '<div class="step-badge" style="background:'+step.bg+';color:'+step.text+';">'+step.id+'</div>' +
+        '<span class="step-title">Paso '+step.id+': '+step.title+'</span>' +
+        '<span class="step-relevance" id="rel-'+step.id+'" style="background:#eee;color:#666;">—</span>' +
+        '<span class="step-chevron" id="chev-'+step.id+'">▾</span>' +
+      '</div>' +
+      '<div class="step-body" id="body-'+step.id+'">' +
+        step.qs.map(function(q) {
+          return '<div class="q-block" id="qb-'+q.n+'">' +
+            '<div class="q-label"><span class="q-num">Q'+q.n+'</span>'+q.label+'</div>' +
+            '<div class="q-sub">'+q.sub+'</div>' +
+            '<div class="q-row">' +
+              '<span style="font-size:12px;color:#666">Estado:</span>' +
+              '<div class="traffic" id="traffic-'+q.n+'">' +
+                '<button title="Información disponible" onclick="setTraffic('+q.n+',\'green\',this)">🟢</button>' +
+                '<button title="Información parcial" onclick="setTraffic('+q.n+',\'amber\',this)">🟡</button>' +
+                '<button title="Vacío de información" onclick="setTraffic('+q.n+',\'red\',this)">🔴</button>' +
+                '<button title="No aplicable" onclick="setTraffic('+q.n+',\'gray\',this)">⚪</button>' +
+              '</div>' +
+              '<span class="traffic-label" id="tlabel-'+q.n+'">sin evaluar</span>' +
+            '</div>' +
+            '<textarea id="txt-'+q.n+'" placeholder="Observaciones, evidencia, fuentes…" oninput="saveText('+q.n+')"></textarea>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    container.appendChild(card);
+  });
+}
+
+function toggleStep(id) {
+  document.getElementById('body-'+id).classList.toggle('open');
+  document.getElementById('chev-'+id).classList.toggle('open');
+}
+
+function setTraffic(n, color, btn) {
+  document.getElementById('traffic-'+n).querySelectorAll('button').forEach(function(b) {
+    b.classList.remove('sel-green','sel-amber','sel-red','sel-gray');
+  });
+  btn.classList.add('sel-'+color);
+  document.getElementById('tlabel-'+n).textContent = TRAFFIC_LABELS[color];
+  if (!answers[n]) answers[n] = {};
+  answers[n].traffic = color;
+  updateProgress();
+}
+
+function saveText(n) {
+  if (!answers[n]) answers[n] = {};
+  answers[n].text = document.getElementById('txt-'+n).value;
+}
+
+function updateProgress() {
+  var done = Object.keys(answers).filter(function(k){ return answers[k].traffic; }).length;
+  document.getElementById('progbar').style.width = Math.round((done/20)*100)+'%';
+}
+
+function buildReport() {
+  var scNames = {"1a":"1A — Evaluación inicial (Pre-enfermedad)","1b":"1B — Preparación (Pre-enfermedad)","2a":"2A — Casos ocasionales (Enfermedad)","2b":"2B — Casos recurrentes (Enfermedad)"};
+  var txt = 'EVALUACIÓN RÁPIDA DE RIESGOS ECDC\n' + '='.repeat(50) + '\n';
+  txt += 'Evaluador: ' + (document.getElementById('evaluador').value||'—') + '\n';
+  txt += 'Fecha: '     + (document.getElementById('fecha').value||'—') + '\n';
+  txt += 'Patógeno: '  + (document.getElementById('patogeno').value||'—') + '\n';
+  txt += 'Área: '      + (document.getElementById('area').value||'—') + '\n';
+  txt += 'Escenario ECDC: ' + (currentScenario ? scNames[currentScenario] : '—') + '\n\n';
+  STEPS.forEach(function(step) {
+    var rel = currentScenario ? step.relevance[currentScenario] : '—';
+    txt += '\nPASO ' + step.id + ': ' + step.title.toUpperCase() + ' [' + rel + ']\n' + '-'.repeat(40) + '\n';
+    step.qs.forEach(function(q) {
+      var t = (answers[q.n] && answers[q.n].traffic) ? answers[q.n].traffic : 'sin evaluar';
+      var obs = (answers[q.n] && answers[q.n].text) ? answers[q.n].text : '(ninguna)';
+      txt += '\nQ' + q.n + '. ' + q.label + '\nEstado: ' + (TRAFFIC_LABELS[t]||'— Sin evaluar') + '\nObservaciones: ' + obs + '\n';
+    });
+  });
+  txt += '\n' + '='.repeat(50) + '\nGenerado con la herramienta de Evaluación Rápida de Riesgos ECDC\n';
+  return txt;
+}
+
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function downloadReportTxt() {
+  const blob = new Blob([buildReport()], { type: 'text/plain;charset=utf-8' });
+  const fecha = (document.getElementById('fecha').value || new Date().toISOString().slice(0,10));
+  const area = (document.getElementById('area').value || 'area').replace(/[^a-z0-9áéíóúñ_-]+/gi, '_');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'evaluacion_riesgos_' + fecha + '_' + area + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+function buildPrintableReportHtml() {
+  const scNames = {
+    '1a':'1A — Evaluación inicial (Pre-enfermedad)',
+    '1b':'1B — Preparación (Pre-enfermedad)',
+    '2a':'2A — Casos ocasionales (Enfermedad)',
+    '2b':'2B — Casos recurrentes (Enfermedad)'
+  };
+  const meta = {
+    'Evaluador/es': document.getElementById('evaluador').value || '—',
+    'Fecha': document.getElementById('fecha').value || '—',
+    'Patógeno / enfermedad': document.getElementById('patogeno').value || '—',
+    'Área geográfica': document.getElementById('area').value || '—',
+    'Escenario ECDC': currentScenario ? scNames[currentScenario] : '—'
+  };
+  const counts = {green:0, amber:0, red:0, gray:0, empty:0};
+  for (let n=1; n<=20; n++) {
+    const t = answers[n] && answers[n].traffic;
+    if (!t) counts.empty++; else counts[t]++;
+  }
+  let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe evaluación riesgos ECDC</title>`;
+  html += `<style>
+    @page { size: A4; margin: 14mm; }
+    body { font-family: Arial, sans-serif; color:#111; font-size:12px; line-height:1.45; }
+    h1 { font-size:20px; margin:0 0 4px; color:#085041; }
+    h2 { font-size:15px; margin:18px 0 8px; border-bottom:2px solid #1D9E75; padding-bottom:4px; }
+    h3 { font-size:13px; margin:10px 0 4px; }
+    .sub { color:#555; margin-bottom:14px; }
+    .meta { display:grid; grid-template-columns: 1fr 1fr; gap:6px 14px; margin-bottom:12px; }
+    .meta div, .summary div { border:1px solid #ddd; border-radius:6px; padding:6px 8px; background:#fafafa; }
+    .label { color:#555; font-weight:bold; display:block; font-size:11px; }
+    .summary { display:grid; grid-template-columns: repeat(5,1fr); gap:6px; margin:10px 0 12px; text-align:center; }
+    .summary strong { font-size:17px; display:block; }
+    .q { border:1px solid #e2e2e2; border-radius:8px; padding:8px; margin:7px 0; break-inside: avoid; }
+    .status { font-weight:bold; }
+    .obs { margin-top:4px; white-space:pre-wrap; }
+    .green { color:#1a9940; } .amber { color:#9b6900; } .red { color:#cc2233; } .gray { color:#666; }
+    .foot { margin-top:18px; color:#666; font-size:11px; border-top:1px solid #ddd; padding-top:8px; }
+    .no-print { margin-bottom:12px; padding:10px; background:#E1F5EE; border:1px solid #1D9E75; border-radius:8px; }
+    @media print { .no-print { display:none; } }
+  </style></head><body>`;
+  html += `<div class="no-print"><strong>Para guardar en PDF:</strong> en la ventana de impresión, selecciona “Guardar como PDF”.</div>`;
+  html += `<h1>Evaluación rápida de riesgos — ECDC</h1><div class="sub">Marco de 5 pasos · 20 preguntas · Enfermedades transmitidas por mosquitos</div>`;
+  html += `<div class="meta">`;
+  Object.keys(meta).forEach(k => { html += `<div><span class="label">${escapeHtml(k)}</span>${escapeHtml(meta[k])}</div>`; });
+  html += `</div>`;
+  html += `<h2>Resumen</h2><div class="summary">
+    <div><strong class="green">${counts.green}</strong>Disponibles</div>
+    <div><strong class="amber">${counts.amber}</strong>Parciales</div>
+    <div><strong class="red">${counts.red}</strong>Vacíos</div>
+    <div><strong class="gray">${counts.gray}</strong>No aplica</div>
+    <div><strong>${counts.empty}</strong>Sin evaluar</div>
+  </div>`;
+  STEPS.forEach(step => {
+    const rel = currentScenario ? step.relevance[currentScenario] : '—';
+    html += `<h2>Paso ${step.id}: ${escapeHtml(step.title)} <span style="font-size:11px;color:#666">[${escapeHtml(rel)}]</span></h2>`;
+    step.qs.forEach(q => {
+      const t = (answers[q.n] && answers[q.n].traffic) ? answers[q.n].traffic : 'empty';
+      const status = TRAFFIC_LABELS[t] || '— Sin evaluar';
+      const obs = (answers[q.n] && answers[q.n].text) ? answers[q.n].text : '(ninguna)';
+      const cls = t === 'empty' ? '' : t;
+      html += `<div class="q"><h3>Q${q.n}. ${escapeHtml(q.label)}</h3><div style="color:#555">${escapeHtml(q.sub)}</div><div class="status ${cls}">Estado: ${escapeHtml(status)}</div><div class="obs"><strong>Observaciones:</strong> ${escapeHtml(obs)}</div></div>`;
+    });
+  });
+  html += `<div class="foot">Generado con la app de Evaluación Rápida de Riesgos ECDC. Herramienta de apoyo técnico; la valoración final debe integrarse por la autoridad competente.</div>`;
+  html += `</body></html>`;
+  return html;
+}
+
+function generatePDF() {
+  // Usamos la función nativa de impresión del navegador para evitar dependencias externas.
+  // En PC y móvil, el usuario puede elegir "Guardar como PDF".
+  const html = buildPrintableReportHtml();
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('El navegador ha bloqueado la ventana de impresión. Permite ventanas emergentes para esta app o usa Exportar informe > copiar texto.');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){
+    try { w.print(); } catch(e) { alert('No se ha podido abrir la impresión automáticamente. Usa Ctrl+P o Compartir > Imprimir.'); }
+  }, 350);
+}
+
+function openExportModal() {
+  document.getElementById('reportPre').textContent = buildReport();
+  document.getElementById('exportModal').classList.add('open');
+  document.getElementById('copyOk').classList.remove('show');
+}
+
+function closeExportModal() {
+  document.getElementById('exportModal').classList.remove('open');
+}
+
+function copyReport() {
+  var text = document.getElementById('reportPre').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      var ok = document.getElementById('copyOk');
+      ok.classList.add('show');
+      setTimeout(function(){ ok.classList.remove('show'); }, 2500);
+    });
+  } else {
+    var pre = document.getElementById('reportPre');
+    var range = document.createRange();
+    range.selectNodeContents(pre);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+function generateSummary() {
+  var panel = document.getElementById('summaryPanel');
+  panel.classList.add('open');
+  var counts = {green:0,amber:0,red:0,gray:0,empty:0};
+  for (var n=1;n<=20;n++) {
+    var t = answers[n] && answers[n].traffic;
+    if (!t) counts.empty++; else counts[t]++;
+  }
+  document.getElementById('summaryGrid').innerHTML = [
+    {label:'Disponibles',val:counts.green,color:'#28a745'},
+    {label:'Parciales',val:counts.amber,color:'#c89000'},
+    {label:'Vacíos',val:counts.red,color:'#cc2233'},
+    {label:'No aplica',val:counts.gray,color:'#888'},
+    {label:'Sin evaluar',val:counts.empty,color:'#aaa'}
+  ].map(function(c){
+    return '<div class="sum-card"><div class="sc-num" style="color:'+c.color+'">'+c.val+'</div><div class="sc-lbl">'+c.label+'</div></div>';
+  }).join('');
+
+  var gaps = [];
+  STEPS.forEach(function(step) {
+    step.qs.forEach(function(q) {
+      var t = answers[q.n] && answers[q.n].traffic;
+      if (t==='red'||!t) gaps.push({n:q.n,label:q.label,t:t||'empty',step:step.title});
+    });
+  });
+  document.getElementById('gapList').innerHTML = gaps.length===0
+    ? '<p style="color:#666;font-size:13px">No se identificaron vacíos críticos.</p>'
+    : gaps.map(function(g){
+        return '<div class="gap-item"><div class="gap-dot" style="background:'+(g.t==='red'?'#cc2233':'#aaa')+'"></div>' +
+               '<div><span style="font-weight:600">Q'+g.n+' — '+g.label+'</span>' +
+               '<span style="color:#666;font-size:12px;display:block">'+g.step+'</span></div></div>';
+      }).join('');
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+buildSteps();
+document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./service-worker.js').catch(function(err){
+      console.warn('Service worker no registrado:', err);
+    });
+  });
+}
+</script>
+
+<script>
+(function(){
+  const KEY = 'ecdcRiskApp_v1';
+  function collectState(){
+    const meta = {};
+    ['evaluador','fecha','patogeno','area'].forEach(id => { const el=document.getElementById(id); if(el) meta[id]=el.value; });
+    const notes = {};
+    for(let i=1;i<=20;i++){ const el=document.getElementById('txt-'+i); if(el) notes[i]=el.value; }
+    const traffic = {};
+    for(let i=1;i<=20;i++){
+      const box=document.getElementById('traffic-'+i); if(!box) continue;
+      const sel=box.querySelector('.sel-green,.sel-amber,.sel-red,.sel-gray');
+      if(sel){ traffic[i]=['green','amber','red','gray'].find(c=>sel.classList.contains('sel-'+c)); }
+    }
+    let scenario = null;
+    ['1a','1b','2a','2b'].forEach(c=>{ const el=document.getElementById('sc-'+c); if(el && el.className.includes('sc-selected-'+c)) scenario=c; });
+    return {meta, notes, traffic, scenario};
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(collectState())); }catch(e){} }
+  function restore(){
+    try{
+      const raw=localStorage.getItem(KEY); if(!raw) return;
+      const s=JSON.parse(raw);
+      Object.entries(s.meta||{}).forEach(([id,v])=>{ const el=document.getElementById(id); if(el && !el.value) el.value=v; });
+      if(s.scenario && window.selectScenario) selectScenario(s.scenario);
+      Object.entries(s.notes||{}).forEach(([n,v])=>{ const el=document.getElementById('txt-'+n); if(el) el.value=v; if(window.saveText) saveText(Number(n)); });
+      Object.entries(s.traffic||{}).forEach(([n,c])=>{
+        const order={green:0,amber:1,red:2,gray:3}; const box=document.getElementById('traffic-'+n); if(!box || order[c]===undefined) return;
+        const btn=box.querySelectorAll('button')[order[c]]; if(btn && window.setTraffic) setTraffic(Number(n),c,btn);
+      });
+    }catch(e){}
+  }
+  window.addEventListener('load', function(){
+    restore();
+    document.addEventListener('input', save);
+    document.addEventListener('click', function(e){ if(e.target.closest('button')) setTimeout(save, 100); });
+  });
+})();
+</script>
+</body>
+</html>
