@@ -127,6 +127,11 @@ textarea { width: 100%; min-height: 70px; resize: vertical; margin-top: 8px; fon
   .actions { position: sticky; bottom: 0; z-index: 10; background: rgba(245,245,245,.96); padding: 10px 0; }
   .actions button { min-width: 100%; }
 }
+
+.intro-box { background:#ffffff; border:1px solid #d9ece6; border-left:5px solid #1D9E75; border-radius:14px; padding:1rem 1.25rem; margin-bottom:1.25rem; box-shadow:0 2px 10px rgba(0,0,0,.03); }
+.intro-box h2 { font-size:16px; color:#085041; margin-bottom:6px; }
+.intro-box p { font-size:13px; color:#3d4b47; line-height:1.55; }
+
 @media print {
   body { background: white; padding: 0; }
   .actions, .progress-bar, .modal-overlay { display: none !important; }
@@ -149,6 +154,13 @@ textarea { width: 100%; min-height: 70px; resize: vertical; margin-top: 8px; fon
     <p>Marco de 5 pasos · 20 preguntas · Enfermedades transmitidas por mosquitos</p>
   </div>
 
+
+  <div class="intro-box" role="note">
+    <h2>Objetivo del formulario</h2>
+    <p>Este formulario está basado en las directrices del <strong>Centro Europeo para la Prevención y el Control de las Enfermedades (ECDC)</strong> para la vigilancia de mosquitos vectores y la evaluación rápida del riesgo de enfermedades transmitidas por mosquitos. Sigue el criterio de análisis estructurado en <strong>5 pasos y 20 preguntas clave</strong>, que permiten valorar la presencia del riesgo entomológico, su distribución espacio-temporal, las opciones de control vectorial, los factores favorecedores de transmisión y otros elementos epidemiológicos o ambientales.</p>
+    <p>Su finalidad es ordenar la información obtenida durante la inspección entomológica, identificar vacíos de información y generar una <strong>valoración entomológica rápida del riesgo de transmisión vectorial</strong>. Esta valoración sirve como apoyo técnico para la <strong>DGSP</strong> o la autoridad sanitaria competente, que deberá integrarla junto con la información epidemiológica, clínica y ambiental disponible en la evaluación global del riesgo.</p>
+  </div>
+
   <div class="meta-grid">
     <div>
       <label class="field-label">Evaluador/es</label>
@@ -159,8 +171,12 @@ textarea { width: 100%; min-height: 70px; resize: vertical; margin-top: 8px; fon
       <input type="date" id="fecha">
     </div>
     <div>
-      <label class="field-label">Patógeno / enfermedad evaluada</label>
-      <input type="text" id="patogeno" placeholder="p. ej. Virus del Nilo Occidental">
+      <label class="field-label">Nº de caso</label>
+      <input type="text" id="caso" placeholder="p. ej. C-0123-2026">
+    </div>
+    <div>
+      <label class="field-label">Enfermedad</label>
+      <input type="text" id="enfermedad" placeholder="p. ej. Dengue, chikungunya, zika">
     </div>
     <div>
       <label class="field-label">Área geográfica</label>
@@ -383,7 +399,8 @@ function buildReport() {
   var txt = 'EVALUACIÓN RÁPIDA DE RIESGOS ECDC\n' + '='.repeat(50) + '\n';
   txt += 'Evaluador: ' + (document.getElementById('evaluador').value||'—') + '\n';
   txt += 'Fecha: '     + (document.getElementById('fecha').value||'—') + '\n';
-  txt += 'Patógeno: '  + (document.getElementById('patogeno').value||'—') + '\n';
+  txt += 'Nº de caso: ' + (document.getElementById('caso').value||'—') + '\n';
+  txt += 'Enfermedad: ' + (document.getElementById('enfermedad').value||'—') + '\n';
   txt += 'Área: '      + (document.getElementById('area').value||'—') + '\n';
   txt += 'Escenario ECDC: ' + (currentScenario ? scNames[currentScenario] : '—') + '\n\n';
   STEPS.forEach(function(step) {
@@ -412,10 +429,11 @@ function escapeHtml(value) {
 function downloadReportTxt() {
   const blob = new Blob([buildReport()], { type: 'text/plain;charset=utf-8' });
   const fecha = (document.getElementById('fecha').value || new Date().toISOString().slice(0,10));
+  const caso = (document.getElementById('caso').value || 'caso').replace(/[^a-z0-9áéíóúñ_-]+/gi, '_');
   const area = (document.getElementById('area').value || 'area').replace(/[^a-z0-9áéíóúñ_-]+/gi, '_');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'evaluacion_riesgos_' + fecha + '_' + area + '.txt';
+  a.download = 'evaluacion_riesgos_' + fecha + '_' + caso + '_' + area + '.txt';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -432,7 +450,8 @@ function buildPrintableReportHtml() {
   const meta = {
     'Evaluador/es': document.getElementById('evaluador').value || '—',
     'Fecha': document.getElementById('fecha').value || '—',
-    'Patógeno / enfermedad': document.getElementById('patogeno').value || '—',
+    'Nº de caso': document.getElementById('caso').value || '—',
+    'Enfermedad': document.getElementById('enfermedad').value || '—',
     'Área geográfica': document.getElementById('area').value || '—',
     'Escenario ECDC': currentScenario ? scNames[currentScenario] : '—'
   };
@@ -460,7 +479,12 @@ function buildPrintableReportHtml() {
     .green { color:#1a9940; } .amber { color:#9b6900; } .red { color:#cc2233; } .gray { color:#666; }
     .foot { margin-top:18px; color:#666; font-size:11px; border-top:1px solid #ddd; padding-top:8px; }
     .no-print { margin-bottom:12px; padding:10px; background:#E1F5EE; border:1px solid #1D9E75; border-radius:8px; }
-    @media print { .no-print { display:none; } }
+    
+.intro-box { background:#ffffff; border:1px solid #d9ece6; border-left:5px solid #1D9E75; border-radius:14px; padding:1rem 1.25rem; margin-bottom:1.25rem; box-shadow:0 2px 10px rgba(0,0,0,.03); }
+.intro-box h2 { font-size:16px; color:#085041; margin-bottom:6px; }
+.intro-box p { font-size:13px; color:#3d4b47; line-height:1.55; }
+
+@media print { .no-print { display:none; } }
   </style></head><body>`;
   html += `<div class="no-print"><strong>Para guardar en PDF:</strong> en la ventana de impresión, selecciona “Guardar como PDF”.</div>`;
   html += `<h1>Evaluación rápida de riesgos — ECDC</h1><div class="sub">Marco de 5 pasos · 20 preguntas · Enfermedades transmitidas por mosquitos</div>`;
@@ -590,7 +614,7 @@ if ('serviceWorker' in navigator) {
   const KEY = 'ecdcRiskApp_v1';
   function collectState(){
     const meta = {};
-    ['evaluador','fecha','patogeno','area'].forEach(id => { const el=document.getElementById(id); if(el) meta[id]=el.value; });
+    ['evaluador','fecha','caso','enfermedad','area'].forEach(id => { const el=document.getElementById(id); if(el) meta[id]=el.value; });
     const notes = {};
     for(let i=1;i<=20;i++){ const el=document.getElementById('txt-'+i); if(el) notes[i]=el.value; }
     const traffic = {};

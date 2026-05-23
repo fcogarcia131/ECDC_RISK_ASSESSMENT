@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ecdc-riesgos-v1';
+const CACHE_NAME = 'ecdc-riesgos-v4';
 const ASSETS = [
   './',
   './index.html',
